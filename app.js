@@ -2,7 +2,7 @@
    MagMa — app.js
    Modifica API_URL con l'URL del tuo Google Apps Script Web App
 ================================================================ */
-const API_URL = 'https://script.google.com/macros/s/AKfycbwfh_TcxlKvAzCm5so6Z-mGJXp4Xv6thW2BbwI906-b/dev/exec';
+const API_URL = 'https://script.google.com/macros/s/https://script.google.com/macros/s/AKfycbyrLHQE2q6xgiVN3QYrV-ACEQYxZpA4vmE_qasGYf3d1Pri3Yzd52eCrn2jUSBhnnvG4g/exec';
 
 
 /* ================================================================
@@ -18,7 +18,7 @@ let codeReader      = null;   // istanza BrowserMultiFormatReader
 /* ================================================================
    RIFERIMENTI DOM
 ================================================================ */
-const $ = id => document.getElementById(id);
+const $ = id => document.getElementById(id)
 
 const dom = {
   // Schermate
@@ -87,11 +87,11 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function initScanner() {
-  if (typeof ZXingBrowser === 'undefined') {
+  if (typeof ZXing === 'undefined') {
     console.warn('ZXing non caricato. La scansione non sarà disponibile.');
     return;
   }
-  codeReader = new ZXingBrowser.BrowserMultiFormatReader();
+  codeReader = new ZXing.BrowserMultiFormatReader();
 }
 
 function setupEventListeners() {
