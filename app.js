@@ -2,7 +2,7 @@
    MagMa — app.js
    Modifica API_URL con l'URL del tuo Google Apps Script Web App
 ================================================================ */
-const API_URL = 'https://script.google.com/macros/s/https://script.google.com/macros/s/AKfycbyrLHQE2q6xgiVN3QYrV-ACEQYxZpA4vmE_qasGYf3d1Pri3Yzd52eCrn2jUSBhnnvG4g/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbw8uJjA_i9HJLcvpkrE51A46QGgLOq2Njx6_TMBJKs4bmyDmZFIPh0DzuQmHkPzOtX-LQ/exec';
 
 
 /* ================================================================
