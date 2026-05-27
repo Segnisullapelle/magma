@@ -42,7 +42,7 @@
 //
 // ================================================================
 
-const SPREADSHEET_ID = 'IL_TUO_SPREADSHEET_ID_QUI';
+const SPREADSHEET_ID = '1-e1YSI6nMaCDH00289GQMyYGpmM9caAN85TmkcJX3TA';
 const SHEET_NAME     = 'Magazzino';
 
 // Indici colonne (0-based, per getValues())
