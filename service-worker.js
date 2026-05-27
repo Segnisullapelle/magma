@@ -3,8 +3,8 @@
    Strategia: Cache-first per asset statici, Network-first per API
 ================================================================ */
 
-const CACHE_NAME    = 'magma-v1';
-const CACHE_CDN     = 'magma-cdn-v1';
+const CACHE_NAME    = 'magma-v2';
+const CACHE_CDN     = 'magma-cdn-v2';
 
 const STATIC_ASSETS = [
   './',

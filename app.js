@@ -8,17 +8,20 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbw8uJjA_i9HJLcvpkrE51A4
 /* ================================================================
    STATO APPLICAZIONE
 ================================================================ */
-let currentAction   = null;   // 'add' | 'remove' | 'create' | 'search'
-let scanControls    = null;   // IScannerControls di ZXing
-let alertTimer      = null;   // timer per auto-dismiss dell'alert
-let pendingBarcode  = null;   // barcode in attesa (usato per AGGIUNGI + popup)
-let codeReader      = null;   // istanza BrowserMultiFormatReader
+let currentAction     = null;   // 'add' | 'remove' | 'create' | 'search' | 'changeLocation'
+let scanControls      = null;   // IScannerControls di ZXing
+let alertTimer        = null;   // timer per auto-dismiss dell'alert
+let pendingBarcode    = null;   // barcode in attesa (usato per AGGIUNGI + popup)
+let locationBarcode   = null;   // barcode in attesa per POSTAZIONE
+let deleteBarcode     = null;   // barcode in attesa per ELIMINA
+let codeReader        = null;   // istanza BrowserMultiFormatReader
+let torchActive       = false;  // stato torcia
 
 
 /* ================================================================
    RIFERIMENTI DOM
 ================================================================ */
-const $ = id => document.getElementById(id)
+const $ = id => document.getElementById(id);
 
 const dom = {
   // Schermate
@@ -29,6 +32,7 @@ const dom = {
   scannerVideo:   $('scanner-video'),
   scannerTitle:   $('scanner-title'),
   btnCancelScan:  $('btn-cancel-scan'),
+  btnTorch:       $('btn-torch'),
 
   // Spinner
   spinnerOverlay: $('spinner-overlay'),
@@ -42,7 +46,9 @@ const dom = {
   btnAdd:         $('btn-add'),
   btnRemove:      $('btn-remove'),
   btnNew:         $('btn-new'),
+  btnLocation:    $('btn-location'),
   btnSearch:      $('btn-search'),
+  btnDelete:      $('btn-delete'),
 
   // Modal scadenza (AGGIUNGI)
   modalExpiry:    $('modal-expiry'),
@@ -67,13 +73,36 @@ const dom = {
   fPrice:         $('f-price'),
   btnFormCancel:  $('btn-form-cancel'),
 
-  // Modal risultato (CERCA / PRELEVA ultimo)
+  // Modal risultato (CERCA / PRELEVA)
   modalResult:    $('modal-result'),
   resultBackdrop: $('result-backdrop'),
   resultIcon:     $('result-icon'),
   resultTitle:    $('result-title'),
   resultCard:     $('result-card'),
   btnResultClose: $('btn-result-close'),
+
+  // Modal postazione (POSTAZIONE)
+  modalLocation:    $('modal-location'),
+  locationBackdrop: $('location-backdrop'),
+  locProductName:   $('loc-product-name'),
+  locCurrentBox:    $('loc-current-box'),
+  inputNewBox:      $('input-new-box'),
+  btnLocationCancel: $('btn-location-cancel'),
+  btnLocationConfirm: $('btn-location-confirm'),
+
+  // Modal elimina — step 1: input barcode
+  modalDelete:       $('modal-delete'),
+  deleteBackdrop:    $('delete-backdrop'),
+  inputDeleteBarcode: $('input-delete-barcode'),
+  btnDeleteCancel:   $('btn-delete-cancel'),
+  btnDeleteSearch:   $('btn-delete-search'),
+
+  // Modal elimina — step 2: conferma
+  modalDeleteConfirm:    $('modal-delete-confirm'),
+  deleteConfirmBackdrop: $('delete-confirm-backdrop'),
+  deleteConfirmCard:     $('delete-confirm-card'),
+  btnDeleteNo:           $('btn-delete-no'),
+  btnDeleteYes:          $('btn-delete-yes'),
 };
 
 
@@ -96,13 +125,18 @@ function initScanner() {
 
 function setupEventListeners() {
   // Pulsanti home
-  dom.btnAdd.addEventListener('click',    () => startScan('add'));
-  dom.btnRemove.addEventListener('click', () => startScan('remove'));
-  dom.btnNew.addEventListener('click',    () => startScan('create'));
-  dom.btnSearch.addEventListener('click', () => startScan('search'));
+  dom.btnAdd.addEventListener('click',      () => startScan('add'));
+  dom.btnRemove.addEventListener('click',   () => startScan('remove'));
+  dom.btnNew.addEventListener('click',      () => startScan('create'));
+  dom.btnLocation.addEventListener('click', () => startScan('changeLocation'));
+  dom.btnSearch.addEventListener('click',   () => startScan('search'));
+  dom.btnDelete.addEventListener('click',   openDeleteModal);
 
   // Scanner — annulla
   dom.btnCancelScan.addEventListener('click', stopScanner);
+
+  // Torcia
+  dom.btnTorch.addEventListener('click', toggleTorch);
 
   // Alert — chiudi
   dom.alertClose.addEventListener('click', hideAlert);
@@ -122,6 +156,24 @@ function setupEventListeners() {
   // Modal risultato
   dom.btnResultClose.addEventListener('click', closeResult);
   dom.resultBackdrop.addEventListener('click', closeResult);
+
+  // Modal postazione
+  dom.btnLocationCancel.addEventListener('click', closeLocation);
+  dom.locationBackdrop.addEventListener('click', closeLocation);
+  dom.btnLocationConfirm.addEventListener('click', confirmLocation);
+
+  // Modal elimina step 1
+  dom.btnDeleteCancel.addEventListener('click', closeDeleteModal);
+  dom.deleteBackdrop.addEventListener('click', closeDeleteModal);
+  dom.btnDeleteSearch.addEventListener('click', searchForDelete);
+  dom.inputDeleteBarcode.addEventListener('keydown', e => {
+    if (e.key === 'Enter') searchForDelete();
+  });
+
+  // Modal elimina step 2
+  dom.btnDeleteNo.addEventListener('click', closeDeleteConfirm);
+  dom.deleteConfirmBackdrop.addEventListener('click', closeDeleteConfirm);
+  dom.btnDeleteYes.addEventListener('click', confirmDelete);
 }
 
 async function registerServiceWorker() {
@@ -139,10 +191,11 @@ async function registerServiceWorker() {
    SCANNER
 ================================================================ */
 const SCAN_TITLES = {
-  add:    '➕  Aggiungi unità',
-  remove: '➖  Preleva unità',
-  create: '🆕  Nuovo prodotto',
-  search: '🔍  Cerca prodotto',
+  add:            '➕  Aggiungi unità',
+  remove:         '➖  Preleva unità',
+  create:         '✦  Nuovo prodotto',
+  search:         '⊙  Cerca prodotto',
+  changeLocation: '📦  Cambia scatola',
 };
 
 async function startScan(action) {
@@ -152,14 +205,16 @@ async function startScan(action) {
   }
 
   currentAction = action;
-  dom.scannerTitle.textContent = SCAN_TITLES[action];
+  dom.scannerTitle.textContent = SCAN_TITLES[action] || 'Scansiona barcode';
 
-  // Mostra schermata scanner
   dom.screenHome.classList.add('hidden');
   dom.screenScanner.classList.remove('hidden');
 
+  // Reset torcia
+  torchActive = false;
+  dom.btnTorch.classList.remove('torch-on');
+
   try {
-    // Usa la fotocamera posteriore se disponibile (ideale per barcode)
     const constraints = {
       video: {
         facingMode: { ideal: 'environment' },
@@ -194,12 +249,57 @@ async function startScan(action) {
 }
 
 function stopScanner() {
+  // Spegni torcia prima di fermare lo stream
+  if (torchActive) {
+    const track = getActiveVideoTrack();
+    if (track) {
+      try { track.applyConstraints({ advanced: [{ torch: false }] }); } catch (_) {}
+    }
+    torchActive = false;
+    dom.btnTorch.classList.remove('torch-on');
+  }
+
   if (scanControls) {
     try { scanControls.stop(); } catch (_) {}
     scanControls = null;
   }
   dom.screenScanner.classList.add('hidden');
   dom.screenHome.classList.remove('hidden');
+}
+
+/* Restituisce il track video attivo dallo stream del video element */
+function getActiveVideoTrack() {
+  const stream = dom.scannerVideo.srcObject;
+  if (!stream) return null;
+  return stream.getVideoTracks()[0] || null;
+}
+
+
+/* ================================================================
+   TORCIA LED
+================================================================ */
+async function toggleTorch() {
+  const track = getActiveVideoTrack();
+  if (!track) {
+    showAlert('Avvia lo scanner prima di usare la torcia.', 'warning');
+    return;
+  }
+
+  const capabilities = track.getCapabilities ? track.getCapabilities() : {};
+  if (!capabilities.torch) {
+    showAlert('Torcia non supportata su questo dispositivo.', 'warning');
+    return;
+  }
+
+  torchActive = !torchActive;
+  try {
+    await track.applyConstraints({ advanced: [{ torch: torchActive }] });
+    dom.btnTorch.classList.toggle('torch-on', torchActive);
+  } catch (err) {
+    torchActive = false;
+    dom.btnTorch.classList.remove('torch-on');
+    showAlert('Impossibile attivare la torcia.', 'error');
+  }
 }
 
 
@@ -213,10 +313,11 @@ async function handleScan(barcode) {
   }
 
   switch (currentAction) {
-    case 'add':    await handleAdd(barcode.trim());    break;
-    case 'remove': await handleRemove(barcode.trim()); break;
-    case 'create': await handleCreate(barcode.trim()); break;
-    case 'search': await handleSearch(barcode.trim()); break;
+    case 'add':            await handleAdd(barcode.trim());            break;
+    case 'remove':         await handleRemove(barcode.trim());         break;
+    case 'create':         await handleCreate(barcode.trim());         break;
+    case 'search':         await handleSearch(barcode.trim());         break;
+    case 'changeLocation': await handleChangeLocation(barcode.trim()); break;
   }
 }
 
@@ -271,7 +372,6 @@ async function handleRemove(barcode) {
 
   if (res.success) {
     if (res.quantity === 0) {
-      // Quantità a zero → mostra scheda di avviso prominente
       showResult('warning', '⚠️', `Ultimo pezzo della scatola N.${res.boxNumber || '?'}!`, [
         { label: 'Prodotto',  value: res.productName || '—' },
         { label: 'Scatola',   value: `N. ${res.boxNumber || '—'}` },
@@ -292,24 +392,19 @@ async function handleRemove(barcode) {
    AZIONE: NUOVO PRODOTTO
 ================================================================ */
 async function handleCreate(barcode) {
-  // Resetta e precompila il form
   dom.formNewProduct.reset();
   dom.fBarcode.value = barcode;
   dom.fQty.value     = '1';
 
-  // Rimuovi eventuali errori precedenti
   dom.formNewProduct.querySelectorAll('.invalid').forEach(el => el.classList.remove('invalid'));
-
   dom.modalForm.classList.remove('hidden');
 
-  // Focus sul primo campo editabile
   setTimeout(() => dom.fBox.focus(), 350);
 }
 
 async function handleFormSubmit(e) {
   e.preventDefault();
 
-  // Validazione minima
   if (!dom.fName.value.trim()) {
     dom.fName.classList.add('invalid');
     dom.fName.focus();
@@ -370,18 +465,140 @@ async function handleSearch(barcode) {
     else if (qty <= 3) qtyCls = 'qty-low';
 
     showResult('success', '📦', res.productName || 'Prodotto trovato', [
-      { label: 'Scatola N.',   value: res.boxNumber  || '—' },
-      { label: 'Marca',        value: res.brand       || '—' },
-      { label: 'Articolo',     value: res.article     || '—' },
-      { label: 'Colore',       value: res.color       || '—' },
-      { label: 'Taglia',       value: res.size        || '—' },
-      { label: 'Quantità',     value: String(qty),   cls: qtyCls },
-      { label: 'Scadenza',     value: res.expiry      || '—' },
-      { label: 'Prezzo',       value: res.price ? `€ ${parseFloat(res.price).toFixed(2)}` : '—' },
-      { label: 'Ult. controllo', value: res.date      || '—' },
+      { label: 'Scatola N.',     value: res.boxNumber  || '—' },
+      { label: 'Marca',          value: res.brand       || '—' },
+      { label: 'Articolo',       value: res.article     || '—' },
+      { label: 'Colore',         value: res.color       || '—' },
+      { label: 'Taglia',         value: res.size        || '—' },
+      { label: 'Quantità',       value: String(qty),   cls: qtyCls },
+      { label: 'Scadenza',       value: res.expiry      || '—' },
+      { label: 'Prezzo',         value: res.price ? `€ ${parseFloat(res.price).toFixed(2)}` : '—' },
+      { label: 'Ult. controllo', value: res.date        || '—' },
     ]);
   } else {
     showAlert(res.message || 'Prodotto non trovato per questo barcode.', 'error');
+  }
+}
+
+
+/* ================================================================
+   AZIONE: POSTAZIONE — cambia numero scatola
+================================================================ */
+async function handleChangeLocation(barcode) {
+  const res = await apiCall({ action: 'changeLocation', barcode });
+  if (!res) return;
+
+  if (res.success) {
+    locationBarcode = barcode;
+    dom.locProductName.textContent = res.productName || '—';
+    dom.locCurrentBox.textContent  = res.boxNumber   || '—';
+    dom.inputNewBox.value = '';
+    dom.modalLocation.classList.remove('hidden');
+    setTimeout(() => dom.inputNewBox.focus(), 350);
+  } else {
+    showAlert(res.message || 'Prodotto non trovato.', 'error');
+  }
+}
+
+async function confirmLocation() {
+  const newBox = dom.inputNewBox.value.trim();
+  if (!newBox) {
+    dom.inputNewBox.classList.add('invalid');
+    showAlert('Inserisci il nuovo numero scatola.', 'warning');
+    return;
+  }
+
+  const res = await apiCall({
+    action:  'updateLocation',
+    barcode: locationBarcode,
+    newBox,
+    date:    todayISO(),
+  });
+  if (!res) return;
+
+  if (res.success) {
+    closeLocation();
+    showAlert(`✓ Scatola aggiornata! "${res.productName}" → Scatola ${newBox}`, 'success');
+  } else {
+    showAlert(res.message || 'Errore durante l\'aggiornamento.', 'error');
+  }
+}
+
+function closeLocation() {
+  dom.modalLocation.classList.add('hidden');
+  dom.inputNewBox.classList.remove('invalid');
+  locationBarcode = null;
+}
+
+
+/* ================================================================
+   AZIONE: ELIMINA PRODOTTO
+================================================================ */
+function openDeleteModal() {
+  dom.inputDeleteBarcode.value = '';
+  dom.inputDeleteBarcode.classList.remove('invalid');
+  dom.modalDelete.classList.remove('hidden');
+  setTimeout(() => dom.inputDeleteBarcode.focus(), 350);
+}
+
+function closeDeleteModal() {
+  dom.modalDelete.classList.add('hidden');
+  dom.inputDeleteBarcode.value = '';
+  dom.inputDeleteBarcode.classList.remove('invalid');
+}
+
+async function searchForDelete() {
+  const barcode = dom.inputDeleteBarcode.value.trim();
+  if (!barcode) {
+    dom.inputDeleteBarcode.classList.add('invalid');
+    showAlert('Inserisci il codice a barre da eliminare.', 'warning');
+    return;
+  }
+
+  // Prima cerca il prodotto per mostrare i dettagli di conferma
+  const res = await apiCall({ action: 'search', barcode });
+  if (!res) return;
+
+  if (!res.success) {
+    dom.inputDeleteBarcode.classList.add('invalid');
+    showAlert(res.message || 'Prodotto non trovato.', 'error');
+    return;
+  }
+
+  // Prodotto trovato: salva barcode e mostra modal di conferma
+  deleteBarcode = barcode;
+  dom.deleteConfirmCard.innerHTML = [
+    { label: 'Nome prodotto', value: res.productName || '—' },
+    { label: 'Scatola',       value: res.boxNumber   || '—' },
+    { label: 'Quantità',      value: String(parseInt(res.quantity, 10) || 0) },
+    { label: 'Barcode',       value: res.barcode      || barcode },
+  ].map(row => `
+    <div class="result-row">
+      <span class="result-label">${escHtml(row.label)}</span>
+      <span class="result-value">${escHtml(String(row.value))}</span>
+    </div>
+  `).join('');
+
+  closeDeleteModal();
+  dom.modalDeleteConfirm.classList.remove('hidden');
+}
+
+function closeDeleteConfirm() {
+  dom.modalDeleteConfirm.classList.add('hidden');
+  deleteBarcode = null;
+}
+
+async function confirmDelete() {
+  if (!deleteBarcode) return;
+
+  const res = await apiCall({ action: 'delete', barcode: deleteBarcode });
+  if (!res) return;
+
+  if (res.success) {
+    closeDeleteConfirm();
+    showAlert(`✓ Eliminato! "${res.productName}" rimosso dal magazzino.`, 'success', 5000);
+  } else {
+    showAlert(res.message || 'Errore durante l\'eliminazione.', 'error');
   }
 }
 
@@ -412,8 +629,8 @@ function hideAlert() {
 }
 
 function showResult(type, icon, title, rows) {
-  dom.resultIcon.className   = `result-icon icon-${type}`;
-  dom.resultIcon.textContent = icon;
+  dom.resultIcon.className    = `result-icon icon-${type}`;
+  dom.resultIcon.textContent  = icon;
   dom.resultTitle.textContent = title;
 
   dom.resultCard.innerHTML = rows.map(row => `
@@ -431,7 +648,7 @@ function closeResult() {
 }
 
 function escHtml(str) {
-  return str
+  return String(str)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')

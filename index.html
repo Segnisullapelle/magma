@@ -7,11 +7,14 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="MagMa">
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="theme-color" content="#1565C0">
+  <meta name="theme-color" content="#1a1a1a">
   <title>MagMa — Gestione Magazzino</title>
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icon.svg">
   <link rel="icon" type="image/svg+xml" href="icon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@300;400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <script src="https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js"></script>
 </head>
@@ -38,68 +41,59 @@
   ════════════════════════════════════════════════════════ -->
   <div id="screen-home">
     <header class="app-header">
-      <div class="header-logo">
-        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" aria-hidden="true">
-          <rect width="32" height="32" rx="6" fill="white" fill-opacity="0.2"/>
-          <rect x="4" y="8" width="3" height="16" rx="1" fill="white"/>
-          <rect x="9" y="8" width="1.5" height="16" rx="0.5" fill="white"/>
-          <rect x="12" y="8" width="3" height="16" rx="1" fill="white"/>
-          <rect x="17" y="8" width="1.5" height="16" rx="0.5" fill="white"/>
-          <rect x="20" y="8" width="2" height="16" rx="1" fill="white"/>
-          <rect x="24" y="8" width="3" height="16" rx="1" fill="white"/>
-        </svg>
-        <div>
-          <h1>MagMa</h1>
-          <p>Gestione Magazzino</p>
-        </div>
-      </div>
+      <h1 class="header-title">MagMa</h1>
     </header>
 
-    <main class="home-grid">
+    <main class="home-list">
+
       <button class="action-btn btn-add" id="btn-add" aria-label="Aggiungi unità al prodotto">
-        <span class="btn-icon" aria-hidden="true">
-          <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
-            <circle cx="22" cy="22" r="20" fill="white" fill-opacity="0.2"/>
-            <path d="M22 12V32M12 22H32" stroke="white" stroke-width="3.5" stroke-linecap="round"/>
-          </svg>
+        <span class="btn-icon-box" aria-hidden="true">+</span>
+        <span class="btn-text">
+          <span class="btn-label">AGGIUNGI</span>
+          <span class="btn-sub">CARICA UNITÀ</span>
         </span>
-        <span class="btn-label">AGGIUNGI</span>
-        <span class="btn-sub">Carica unità</span>
       </button>
 
       <button class="action-btn btn-remove" id="btn-remove" aria-label="Preleva unità dal prodotto">
-        <span class="btn-icon" aria-hidden="true">
-          <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
-            <circle cx="22" cy="22" r="20" fill="white" fill-opacity="0.2"/>
-            <path d="M12 22H32" stroke="white" stroke-width="3.5" stroke-linecap="round"/>
-          </svg>
+        <span class="btn-icon-box" aria-hidden="true">−</span>
+        <span class="btn-text">
+          <span class="btn-label">PRELEVA</span>
+          <span class="btn-sub">SCARICA UNITÀ</span>
         </span>
-        <span class="btn-label">PRELEVA</span>
-        <span class="btn-sub">Scarica unità</span>
       </button>
 
       <button class="action-btn btn-new" id="btn-new" aria-label="Inserisci nuovo prodotto">
-        <span class="btn-icon" aria-hidden="true">
-          <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
-            <circle cx="22" cy="22" r="20" fill="white" fill-opacity="0.2"/>
-            <path d="M14 22H30M22 14V30" stroke="white" stroke-width="3" stroke-linecap="round"/>
-            <rect x="10" y="10" width="24" height="24" rx="4" stroke="white" stroke-width="2.5"/>
-          </svg>
+        <span class="btn-icon-box" aria-hidden="true">✦</span>
+        <span class="btn-text">
+          <span class="btn-label">NUOVO</span>
+          <span class="btn-sub">NUOVO PRODOTTO</span>
         </span>
-        <span class="btn-label">NUOVO</span>
-        <span class="btn-sub">Nuovo prodotto</span>
+      </button>
+
+      <button class="action-btn btn-location" id="btn-location" aria-label="Cambia numero scatola prodotto">
+        <span class="btn-icon-box" aria-hidden="true">📦</span>
+        <span class="btn-text">
+          <span class="btn-label">POSTAZIONE</span>
+          <span class="btn-sub">CAMBIA SCATOLA</span>
+        </span>
       </button>
 
       <button class="action-btn btn-search" id="btn-search" aria-label="Cerca informazioni prodotto">
-        <span class="btn-icon" aria-hidden="true">
-          <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
-            <circle cx="20" cy="20" r="9" stroke="white" stroke-width="3"/>
-            <path d="M27 27L34 34" stroke="white" stroke-width="3" stroke-linecap="round"/>
-          </svg>
+        <span class="btn-icon-box" aria-hidden="true">⊙</span>
+        <span class="btn-text">
+          <span class="btn-label">CERCA</span>
+          <span class="btn-sub">TROVA PRODOTTO</span>
         </span>
-        <span class="btn-label">CERCA</span>
-        <span class="btn-sub">Info prodotto</span>
       </button>
+
+      <button class="action-btn btn-delete" id="btn-delete" aria-label="Elimina prodotto dal magazzino">
+        <span class="btn-icon-box" aria-hidden="true">🗑</span>
+        <span class="btn-text">
+          <span class="btn-label">CANCELLA</span>
+          <span class="btn-sub">ELIMINA PRODOTTO</span>
+        </span>
+      </button>
+
     </main>
   </div>
 
@@ -115,6 +109,7 @@
         Annulla
       </button>
       <h2 id="scanner-title">Scansiona barcode</h2>
+      <button id="btn-torch" class="torch-btn" aria-label="Attiva torcia" title="Torcia">💡</button>
     </div>
 
     <div class="scanner-container">
@@ -236,7 +231,7 @@
   </div>
 
   <!-- ═══════════════════════════════════════════════════════
-       MODAL: SCHEDA RISULTATO
+       MODAL: SCHEDA RISULTATO (CERCA / PRELEVA)
   ════════════════════════════════════════════════════════ -->
   <div id="modal-result" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="result-title">
     <div class="modal-backdrop" id="result-backdrop"></div>
@@ -249,6 +244,77 @@
     </div>
   </div>
 
+  <!-- ═══════════════════════════════════════════════════════
+       MODAL: POSTAZIONE — mostra prodotto + input nuova scatola
+  ════════════════════════════════════════════════════════ -->
+  <div id="modal-location" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="location-title">
+    <div class="modal-backdrop" id="location-backdrop"></div>
+    <div class="modal-content">
+      <div class="modal-handle"></div>
+      <h3 id="location-title">Cambia Scatola</h3>
+      <div class="location-info" id="location-info">
+        <div class="location-row">
+          <span class="location-label">Prodotto</span>
+          <span class="location-value" id="loc-product-name">—</span>
+        </div>
+        <div class="location-row">
+          <span class="location-label">Scatola attuale</span>
+          <span class="location-value location-box" id="loc-current-box">—</span>
+        </div>
+      </div>
+      <div class="form-group" style="margin-top:16px;">
+        <label for="input-new-box">Nuovo numero scatola</label>
+        <input type="text" id="input-new-box" placeholder="es. 042" inputmode="text" autocomplete="off">
+      </div>
+      <div class="modal-buttons">
+        <button id="btn-location-cancel" class="btn-secondary">Annulla</button>
+        <button id="btn-location-confirm" class="btn-primary btn-location-color">Conferma</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════
+       MODAL: ELIMINA — input barcode manuale
+  ════════════════════════════════════════════════════════ -->
+  <div id="modal-delete" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="delete-title">
+    <div class="modal-backdrop" id="delete-backdrop"></div>
+    <div class="modal-content">
+      <div class="modal-handle"></div>
+      <h3 id="delete-title">Elimina Prodotto</h3>
+      <p class="modal-desc">Inserisci il codice a barre del prodotto da eliminare.</p>
+      <div class="form-group">
+        <label for="input-delete-barcode">Codice a barre</label>
+        <input type="text" id="input-delete-barcode" placeholder="es. 8001234567890"
+               inputmode="numeric" autocomplete="off" autocorrect="off" spellcheck="false">
+      </div>
+      <div class="modal-buttons">
+        <button id="btn-delete-cancel" class="btn-secondary">Annulla</button>
+        <button id="btn-delete-search" class="btn-primary btn-danger-color">
+          🗑 Elimina Prodotto
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════
+       MODAL: CONFERMA ELIMINAZIONE — mostra dettagli + chiede conferma
+  ════════════════════════════════════════════════════════ -->
+  <div id="modal-delete-confirm" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="delete-confirm-title">
+    <div class="modal-backdrop" id="delete-confirm-backdrop"></div>
+    <div class="modal-content">
+      <div class="modal-handle"></div>
+      <div class="result-icon icon-error" aria-hidden="true">⚠️</div>
+      <h3 id="delete-confirm-title" class="result-title-text">Conferma eliminazione</h3>
+      <p class="modal-desc" style="text-align:center;">
+        Sei sicuro di voler eliminare definitivamente questo prodotto?
+      </p>
+      <div class="result-card" id="delete-confirm-card"></div>
+      <div class="modal-buttons">
+        <button id="btn-delete-no" class="btn-secondary">NO, annulla</button>
+        <button id="btn-delete-yes" class="btn-primary btn-danger-color">SÌ, elimina</button>
+      </div>
+    </div>
+  </div>
 
   <script src="app.js"></script>
 </body>
